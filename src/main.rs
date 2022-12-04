@@ -10,17 +10,11 @@ use iced::{
     Theme, Alignment, Length
 };
 
-// use iced::theme::Button::Custom as tbutton_custom;
-
-// mod styles;
-
-// use styles::Btn as BtnStyle;
 
 const APP_WIDTH: u32 = 500;
 const APP_HEIGHT: u32 = 500;
 
 pub fn main() -> iced::Result {
-    // env_logger::builder().format_timestamp(None).init();
     CookieApp::run(Settings {
         antialiasing: true,
         window: window::Settings {
@@ -28,6 +22,7 @@ pub fn main() -> iced::Result {
             position: window::Position::Centered,
             ..window::Settings::default()
         },
+        default_font: Some(include_bytes!("../font/Menlo-Regular.ttf")),
         default_text_size: 14,
         ..Settings::default()
     })
@@ -70,10 +65,19 @@ impl Application for CookieApp {
     fn new (_flags: ()) -> (Self, Command<Message>) {
         (
             CookieApp {
-                keys_str: String::new(),
-                keys: vec![],
                 cookie_keys_str: String::new(),
-                cookie_keys: vec![],
+                cookie_keys: vec![
+                    "cookie".to_string(),
+                    "x-csrftoken".to_string(),
+                    "x-www-ig-claim".to_string()
+                ],
+                keys_str: String::new(),
+                keys: vec![
+                    "Cookie".to_string(),
+                    "X-CSRFToken".to_string(),
+                    "X-WWW-IG-Claim".to_string()
+                ],
+
                 raw_cookies: String::new(),
                 save_path: env::current_dir().unwrap().display().to_string(),
                 account_name: String::new(),
@@ -83,7 +87,7 @@ impl Application for CookieApp {
         )
     }
     fn title(&self) -> String {
-        String::from("Cookie creator")
+        String::from("Преобразователь CUrl в JSON")
     }
 
     fn update(&mut self, m: Message) -> Command<Message> {
@@ -101,24 +105,28 @@ impl Application for CookieApp {
                     let re = regex::Regex::new(r"-H '(.+?):\s(.+?)'").unwrap();
                     let cookies: Vec<Vec<String>> = re.captures_iter(raw_cookie)
                         .filter(|item| {
-                            let key = item[1].to_string();
+                            let key = item[1].to_string().to_lowercase();
+                            println!("{}, {}, {:?}", key, self.cookie_keys.contains(&key), self.cookie_keys);
                             self.cookie_keys.contains(&key)
                         })
                         .enumerate()
-                        .map(|(i, item)| {
-                            let key = item[1].to_string();
+                        .map(|(_, item)| {
+                            let key = item[1].to_string().to_lowercase();
                             let value = item[2]
                                 .to_string()
                                 .replace("\"", "\'")
                                 .replace("\\", "\\\\");
+                            println!("{}, {}", key, value);
 
-                            let setting_key_index = self.cookie_keys.iter().position(|cookie_key| *cookie_key == key);
+                            let setting_key_index = self.cookie_keys
+                                .iter()
+                                .map(|item| item.to_lowercase().clone())
+                                .position(|cookie_key| *cookie_key == key);
 
-                            if let cookie_index = setting_key_index.unwrap()  {
-                                vec![self.keys[cookie_index].clone(), value]
-                            } else {
-                                vec![key, value]
-                            }
+                            return match setting_key_index {
+                                Some(cookie_index) => vec![self.keys[cookie_index].clone(), value],
+                                None => vec![key, value]
+                            };
                         }).collect();
                     self.cookies.insert(
                         self.account_name.clone(),
@@ -134,7 +142,7 @@ impl Application for CookieApp {
                 self.keys_str = "".to_string();
             },
             Message::AppendCookieKey => {
-                self.cookie_keys.push(self.cookie_keys_str.clone());
+                self.cookie_keys.push(self.cookie_keys_str.to_lowercase().clone());
                 self.cookie_keys_str = "".to_string();
             },
             Message::RemoveKey => {
@@ -204,45 +212,45 @@ impl Application for CookieApp {
         column![
             // Поле для ввода ключей из CURL
             row![
-                text_input("Key from cookie", &self.cookie_keys_str, Message::InputCookieKeyStr),
-                button("Add").on_press(Message::AppendCookieKey).padding([5, 40]),
-                button("Remove")
+                text_input("Ключи из CUrl", &self.cookie_keys_str, Message::InputCookieKeyStr),
+                button("Добавить").on_press(Message::AppendCookieKey).padding([5, 40]),
+                button("Удалить")
                     .on_press(Message::RemoveCookieKey)
                     .padding([5, 40])
                     .style(iced::theme::Button::Destructive),
             ].spacing(top_row_spacing),
-            text(format!("Selected keys: {}", all_cookie_keys)).width(Length::FillPortion(100)),
+            text(format!("Выбранные ключи: {}", all_cookie_keys)).width(Length::FillPortion(100)),
             // Поле для ввода ключей в JSON файл
             row![
-                text_input("Key for json file", &self.keys_str, Message::InputKeyStr),
-                button("Add").on_press(Message::AppendKey).padding([5, 40]),
-                button("Remove")
+                text_input("Ключи для файла", &self.keys_str, Message::InputKeyStr),
+                button("Добавить").on_press(Message::AppendKey).padding([5, 40]),
+                button("Удалить")
                     .on_press(Message::RemoveKey)
                     .padding([5, 40])
                     .style(iced::theme::Button::Destructive),
             ].spacing(top_row_spacing),
 
             // Вывод полей для файла json
-            text(format!("Selected keys: {}", all_json_keys)).width(Length::FillPortion(100)),
+            text(format!("Выбранные ключи: {}", all_json_keys)).width(Length::FillPortion(100)),
             // Поле для ввода назвнаия аккаунта
-            text_input("Account name", &self.account_name, Message::InputAccountName),
+            text_input("Название аккаунта", &self.account_name, Message::InputAccountName),
             // Поле для ввода куки из браузера
-            text_input("Insert cookie as CURL", &self.raw_cookies, Message::InputCookie),
+            text_input("Вставьте строку CUrl", &self.raw_cookies, Message::InputCookie),
 
             // Поле для ввода пути сохранения файла
-            text_input("Insert path to file", &self.save_path, Message::InputSavePath),
+            text_input("Вставьте путь к сохраняемому файлу", &self.save_path, Message::InputSavePath),
 
             // Кнопка конвертирования
             row![
-                button("Convert")
+                button("Преобразовать")
                     .padding([5, 40])
                     .on_press(Message::AppendCookie),
-                button("Save")
+                button("Соханить")
                     .padding([5, 50])
                     .on_press(Message::SaveFile)
                     .style(iced::theme::Button::Destructive)
             ].spacing(20),
-            text(format!("Appended accounts: {}", appended_accounts)).width(Length::FillPortion(100)),
+            text(format!("Преобразованные аккаунты: {}", appended_accounts)).width(Length::FillPortion(100)),
         ]
         .padding(50)
         .align_items(Alignment::Center)
