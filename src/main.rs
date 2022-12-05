@@ -69,13 +69,13 @@ impl Application for CookieApp {
                 cookie_keys: vec![
                     "cookie".to_string(),
                     "x-csrftoken".to_string(),
-                    "x-www-ig-claim".to_string()
+                    "x-ig-www-claim".to_string()
                 ],
                 keys_str: String::new(),
                 keys: vec![
                     "Cookie".to_string(),
                     "X-CSRFToken".to_string(),
-                    "X-WWW-IG-Claim".to_string()
+                    "X-IG-WWW-Claim".to_string()
                 ],
 
                 raw_cookies: String::new(),
@@ -106,7 +106,6 @@ impl Application for CookieApp {
                     let cookies: Vec<Vec<String>> = re.captures_iter(raw_cookie)
                         .filter(|item| {
                             let key = item[1].to_string().to_lowercase();
-                            println!("{}, {}, {:?}", key, self.cookie_keys.contains(&key), self.cookie_keys);
                             self.cookie_keys.contains(&key)
                         })
                         .enumerate()
@@ -116,7 +115,6 @@ impl Application for CookieApp {
                                 .to_string()
                                 .replace("\"", "\'")
                                 .replace("\\", "\\\\");
-                            println!("{}, {}", key, value);
 
                             let setting_key_index = self.cookie_keys
                                 .iter()
@@ -134,7 +132,6 @@ impl Application for CookieApp {
                     );
                     self.account_name = "".to_string();
                     self.raw_cookies = "".to_string();
-                    println!("{:?}", self.cookies)
                 }
             },
             Message::AppendKey => {
