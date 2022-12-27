@@ -102,9 +102,10 @@ impl Application for CookieApp {
                     && !self.account_name.is_empty()
                     && self.cookie_keys.len() > 0 {
                     let raw_cookie = &self.raw_cookies;
-                    let re = regex::Regex::new(r"-H '(.+?):\s(.+?)'").unwrap();
+                    let re = regex::Regex::new(r#"-H ['|"](.+?):\s(.+?)['|"][\s|\n]"#).unwrap();
                     let cookies: Vec<Vec<String>> = re.captures_iter(raw_cookie)
                         .filter(|item| {
+                            println!("{:?}", item);
                             let key = item[1].to_string().to_lowercase();
                             self.cookie_keys.contains(&key)
                         })
